@@ -33,3 +33,5 @@ sysinfo.txt
 .gradle
 .pkf
 /Assets/SceneDependencyCache
+.vs/
+TwinBladesAnimsetBase/

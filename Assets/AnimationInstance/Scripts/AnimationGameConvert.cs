@@ -11,6 +11,7 @@ namespace AnimationInstance.Scripts
     {
         protected override void OnUpdate()
         {
+            UnityEngine.Debug.Log("convert system");
             var query = DstEntityManager.CreateEntityQuery(
                 typeof(RenderMesh),
                 typeof(Parent));
