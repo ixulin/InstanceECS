@@ -584,5 +584,5 @@ Shader "Universal Render Pipeline/Simple Lit Dots Skin Anim"
     }
 
     Fallback  "Hidden/Universal Render Pipeline/FallbackError"
-    // CustomEditor "UnityEditor.Rendering.Universal.ShaderGUI.SimpleLitShader"
+    CustomEditor "AnimationInstance.Editor.SimpleLitDotsAnimShader"
 }

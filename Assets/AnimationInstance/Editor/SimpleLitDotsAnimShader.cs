@@ -2,106 +2,108 @@ using System;
 using UnityEngine;
 using UnityEditor;
 using UnityEngine.Rendering;
+using UnityEditor.Rendering.Universal.ShaderGUI;
 //using UnityEditor.Rendering.Universal;
-//using UnityEditor.Rendering.
 
 namespace AnimationInstance.Editor
 {
-    internal class SimpleLit2Shader// : BaseShaderGUI
+    internal class SimpleLitDotsAnimShader : BaseShaderGUI
     {
         // Properties
-        //private SimpleLitGUI.SimpleLitProperties shadingModelProperties;
+        private MaterialProperty pixelCountPerFrame;
+        private MaterialProperty animTex;
 
-        //// collect properties from the material properties
-        //public override void FindProperties(MaterialProperty[] properties)
-        //{
-        //    base.FindProperties(properties);
-        //    shadingModelProperties = new SimpleLitGUI.SimpleLitProperties(properties);
-        //}
+        // Properties
+        private SimpleLitGUI.SimpleLitProperties shadingModelProperties;
+
+        // collect properties from the material properties
+        public override void FindProperties(MaterialProperty[] properties)
+        {
+            base.FindProperties(properties);
+            shadingModelProperties = new SimpleLitGUI.SimpleLitProperties(properties);
+            pixelCountPerFrame = BaseShaderGUI.FindProperty("_PixelCountPerFrame", properties);
+            animTex = BaseShaderGUI.FindProperty("_AnimTex", properties);
+        }
 
         // material changed check
-        // public override void MaterialChanged(Material material)
-        // {
-        //     if (material == null)
-        //         throw new ArgumentNullException("material");
+        public override void ValidateMaterial(Material material)
+        {
+            SetMaterialKeywords(material, SimpleLitGUI.SetMaterialKeywords);
+        }
 
-        //     SetMaterialKeywords(material, SimpleLitGUI.SetMaterialKeywords);
-        // }
+        // material main surface options
+        public override void DrawSurfaceOptions(Material material)
+        {
+            if (material == null)
+                throw new ArgumentNullException("material");
 
-        //// material main surface options
-        //public override void DrawSurfaceOptions(Material material)
-        //{
-        //    if (material == null)
-        //        throw new ArgumentNullException("material");
+            // Use default labelWidth
+            EditorGUIUtility.labelWidth = 0f;
 
-        //    // Use default labelWidth
-        //    EditorGUIUtility.labelWidth = 0f;
+            base.DrawSurfaceOptions(material);
+        }
 
-        //    // Detect any changes to the material
-        //    EditorGUI.BeginChangeCheck();
-        //    {
-        //        base.DrawSurfaceOptions(material);
-        //    }
-        //    if (EditorGUI.EndChangeCheck())
-        //    {
-        //        foreach (var obj in blendModeProp.targets)
-        //            MaterialChanged((Material)obj);
-        //    }
-        //}
+        // material main surface inputs
+        public override void DrawSurfaceInputs(Material material)
+        {
+            base.DrawSurfaceInputs(material);
+            SimpleLitGUI.Inputs(shadingModelProperties, materialEditor, material);
+            DrawEmissionProperties(material, true);
+            DrawTileOffset(materialEditor, baseMapProp);
+            EditorGUILayout.Space(4);
+            if (animTex != null)
+            {
+                materialEditor.TexturePropertySingleLine(EditorGUIUtility.TrTextContent("Anim Tex",
+                "Anim Tex That Bone Matrixes Baked On."), animTex);
+            }
+            if (pixelCountPerFrame != null)
+            {
+                materialEditor.FloatProperty(pixelCountPerFrame, "PixelCountPerFrame");
+            }
+        }
 
-        //// material main surface inputs
-        //public override void DrawSurfaceInputs(Material material)
-        //{
-        //    base.DrawSurfaceInputs(material);
-        //    SimpleLitGUI.Inputs(shadingModelProperties, materialEditor, material);
-        //    DrawEmissionProperties(material, true);
-        //    DrawTileOffset(materialEditor, baseMapProp);
-        //}
+        public override void DrawAdvancedOptions(Material material)
+        {
+            SimpleLitGUI.Advanced(shadingModelProperties);
+            base.DrawAdvancedOptions(material);
+        }
 
-        //public override void DrawAdvancedOptions(Material material)
-        //{
-        //    SimpleLitGUI.Advanced(shadingModelProperties);
-        //    base.DrawAdvancedOptions(material);
-        //}
+        public override void AssignNewShaderToMaterial(Material material, Shader oldShader, Shader newShader)
+        {
+            if (material == null)
+                throw new ArgumentNullException("material");
 
-        //public override void AssignNewShaderToMaterial(Material material, Shader oldShader, Shader newShader)
-        //{
-        //    if (material == null)
-        //        throw new ArgumentNullException("material");
+            // _Emission property is lost after assigning Standard shader to the material
+            // thus transfer it before assigning the new shader
+            if (material.HasProperty("_Emission"))
+            {
+                material.SetColor("_EmissionColor", material.GetColor("_Emission"));
+            }
 
-        //    // _Emission property is lost after assigning Standard shader to the material
-        //    // thus transfer it before assigning the new shader
-        //    if (material.HasProperty("_Emission"))
-        //    {
-        //        material.SetColor("_EmissionColor", material.GetColor("_Emission"));
-        //    }
+            base.AssignNewShaderToMaterial(material, oldShader, newShader);
 
-        //    base.AssignNewShaderToMaterial(material, oldShader, newShader);
+            if (oldShader == null || !oldShader.name.Contains("Legacy Shaders/"))
+            {
+                SetupMaterialBlendMode(material);
+                return;
+            }
 
-        //    if (oldShader == null || !oldShader.name.Contains("Legacy Shaders/"))
-        //    {
-        //        SetupMaterialBlendMode(material);
-        //        return;
-        //    }
-
-        //    SurfaceType surfaceType = SurfaceType.Opaque;
-        //    BlendMode blendMode = BlendMode.Alpha;
-        //    if (oldShader.name.Contains("/Transparent/Cutout/"))
-        //    {
-        //        surfaceType = SurfaceType.Opaque;
-        //        material.SetFloat("_AlphaClip", 1);
-        //    }
-        //    else if (oldShader.name.Contains("/Transparent/"))
-        //    {
-        //        // NOTE: legacy shaders did not provide physically based transparency
-        //        // therefore Fade mode
-        //        surfaceType = SurfaceType.Transparent;
-        //        blendMode = BlendMode.Alpha;
-        //    }
-        //    material.SetFloat("_Surface", (float)surfaceType);
-        //    material.SetFloat("_Blend", (float)blendMode);
-
-        //    MaterialChanged(material);
-        //}
+            SurfaceType surfaceType = SurfaceType.Opaque;
+            BlendMode blendMode = BlendMode.Alpha;
+            if (oldShader.name.Contains("/Transparent/Cutout/"))
+            {
+                surfaceType = SurfaceType.Opaque;
+                material.SetFloat("_AlphaClip", 1);
+            }
+            else if (oldShader.name.Contains("/Transparent/"))
+            {
+                // NOTE: legacy shaders did not provide physically based transparency
+                // therefore Fade mode
+                surfaceType = SurfaceType.Transparent;
+                blendMode = BlendMode.Alpha;
+            }
+            material.SetFloat("_Surface", (float)surfaceType);
+            material.SetFloat("_Blend", (float)blendMode);
+        }
     }
 }
