@@ -6,22 +6,23 @@ using Unity.Transforms;
 
 namespace AnimationInstance.Scripts
 {
-    [UpdateInGroup(typeof(GameObjectAfterConversionGroup))]
-    public class AnimationGameConvert : GameObjectConversionSystem
+    [UpdateInGroup(typeof(BakingSystemGroup))]
+    public partial class AnimationGameConvert : SystemBase
     {
         protected override void OnUpdate()
         {
             UnityEngine.Debug.Log("convert system");
+            var DstEntityManager = World.DefaultGameObjectInjectionWorld.EntityManager;
             var query = DstEntityManager.CreateEntityQuery(
                 typeof(RenderMesh),
                 typeof(Parent));
             var entities = query.ToEntityArray(Allocator.Persistent);
             foreach (var entity in entities)
             {
-                var render = DstEntityManager.GetSharedComponentData<RenderMesh>(entity);
-                render.receiveShadows = false;
-                DstEntityManager.SetSharedComponentData(entity, render);
-                
+                var render = DstEntityManager.GetSharedComponentManaged<RenderMesh>(entity);
+                //render.receiveShadows = false;
+                DstEntityManager.SetSharedComponentManaged(entity, render);
+
                 var parent = DstEntityManager.GetComponentData<Parent>(entity);
                 if (DstEntityManager.HasComponent<AnimationTypeComponent>(parent.Value))
                 {

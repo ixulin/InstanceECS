@@ -35,3 +35,4 @@ sysinfo.txt
 /Assets/SceneDependencyCache
 .vs/
 TwinBladesAnimsetBase/
+.vsconfig
